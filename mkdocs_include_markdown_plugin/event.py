@@ -57,6 +57,7 @@ ARGUMENT_REGEXES = {
     'dedent': re.compile(r'dedent=(\w*)'),
     'heading-offset': re.compile(r'heading-offset=([0-5])'),
     'exclude': re.compile(r'exclude="([^"]+)"'),
+    'filename': re.compile(r'((?:\\|\/))+(\w+\.+\w[md]+)'),
 }
 
 
@@ -350,5 +351,27 @@ def get_file_content(markdown, abs_src_path, cumulative_heading_offset=0):
     return markdown
 
 
-def on_page_markdown(markdown, page, **kwargs):
-    return get_file_content(markdown, page.file.abs_src_path)
+def on_page_markdown(self, markdown, page, **kwargs):
+    newmk = get_file_content(markdown, page.file.abs_src_path)
+    if self.config['save-file-processed']:
+        filename = re.search(
+            ARGUMENT_REGEXES['filename'], page.file.abs_src_path)
+        if filename is not None:
+            filename = filename.group(2)
+            for file in self.config['files']:
+                if file == filename:
+                    save_file(newmk, page.file.abs_src_path.replace(
+                        filename, filename.replace('.md', "-final.md")))
+    return newmk
+
+
+def save_file(markdown, filename):
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(markdown)
+        print("File saved: " + filename)
+
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f'Could not save file \'{filename}\'',
+        )
