@@ -57,7 +57,7 @@ ARGUMENT_REGEXES = {
     'dedent': re.compile(r'dedent=(\w*)'),
     'heading-offset': re.compile(r'heading-offset=([0-5])'),
     'exclude': re.compile(r'exclude="([^"]+)"'),
-    'filename': re.compile(r'((?:\\|\/))+(\w+\.+\w[md]+)'),
+    'filename': re.compile(r'^(([a-zA-Z0-9_\.+-]+[^-final])+(\.md))$'),
 }
 
 
@@ -355,9 +355,9 @@ def on_page_markdown(self, markdown, page, **kwargs):
     newmk = get_file_content(markdown, page.file.abs_src_path)
     if self.config['save-file-processed']:
         filename = re.search(
-            ARGUMENT_REGEXES['filename'], page.file.abs_src_path)
+            ARGUMENT_REGEXES['filename'], re.split(r'[\\/]', page.file.abs_src_path)[-1])
         if filename is not None:
-            filename = filename.group(2)
+            filename = filename.group(1)
             for file in self.config['files']:
                 if file == filename:
                     save_file(newmk, page.file.abs_src_path.replace(
@@ -375,3 +375,8 @@ def save_file(markdown, filename):
         raise FileNotFoundError(
             f'Could not save file \'{filename}\'',
         )
+
+def on_pre_build(self, config):
+    if self.config['save-file-processed']:
+        print("disabled save-file-processed")
+        self.config['save-file-processed'] = False
